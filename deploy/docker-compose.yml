@@ -1,0 +1,48 @@
+services:
+  traefik:
+    image: traefik:v3.0
+    ports:
+      - "80:80"
+    command:
+      - "--entrypoints.web.address=:80"
+      - "--providers.file.filename=/etc/traefik/routes.yml"
+      - "--providers.file.watch=true"
+    volumes:
+      - ./traefik.yml:/etc/traefik/routes.yml:ro
+    depends_on:
+      - nexus
+    restart: unless-stopped
+
+  nexus:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgres://nexus:${POSTGRES_PASSWORD}@postgres:5432/nexus?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: nexus
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

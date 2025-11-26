@@ -1,0 +1,13 @@
+http:
+  routers:
+    nexus:
+      rule: "PathPrefix(`/`)"
+      service: nexus
+      entryPoints:
+        - web
+
+  services:
+    nexus:
+      loadBalancer:
+        servers:
+          - url: "http://nexus:8080"

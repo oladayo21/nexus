@@ -1,0 +1,23 @@
+# Stage 1: Build frontend
+FROM oven/bun:1-alpine AS frontend
+WORKDIR /app
+COPY web/package.json web/bun.lock ./
+RUN bun install --frozen-lockfile
+COPY web/ ./
+RUN bun run build
+
+# Stage 2: Build Go binary
+FROM golang:1.25-alpine AS backend
+WORKDIR /app
+COPY go.mod ./
+RUN go mod download
+COPY . .
+COPY --from=frontend /app/dist ./web/dist
+RUN CGO_ENABLED=0 GOOS=linux go build -o /nexus ./cmd/nexus
+
+# Stage 3: Runtime
+FROM alpine:3.19
+RUN apk --no-cache add ca-certificates
+COPY --from=backend /nexus /nexus
+EXPOSE 8080
+CMD ["/nexus"]
