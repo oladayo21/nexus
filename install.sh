@@ -3,6 +3,7 @@ set -e
 
 NEXUS_DIR="/opt/nexus"
 REPO_URL="https://github.com/oladayo21/nexus.git"
+BRANCH="${NEXUS_BRANCH:-poc/vps-installation}"
 
 echo "Installing Nexus..."
 
@@ -41,10 +42,12 @@ fi
 if [ -d "$NEXUS_DIR" ]; then
   echo "Updating existing installation..."
   cd "$NEXUS_DIR"
+  git fetch origin
+  git checkout "$BRANCH"
   git pull
 else
   echo "Cloning repository..."
-  git clone "$REPO_URL" "$NEXUS_DIR"
+  git clone -b "$BRANCH" "$REPO_URL" "$NEXUS_DIR"
   cd "$NEXUS_DIR"
 fi
 
