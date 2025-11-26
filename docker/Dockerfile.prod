@@ -13,7 +13,7 @@ COPY go.mod ./
 RUN go mod download
 COPY . .
 COPY --from=frontend /app/dist ./web/dist
-RUN CGO_ENABLED=0 GOOS=linux go build -o /nexus ./cmd/nexus
+RUN CGO_ENABLED=0 GOOS=linux go build -o /nexus .
 
 # Stage 3: Runtime
 FROM alpine:3.19

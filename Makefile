@@ -15,7 +15,7 @@ dev-logs: ## View logs
 	docker compose logs -f
 
 build: ## Build nexus binary
-	go build -o bin/nexus ./cmd/nexus
+	go build -o bin/nexus .
 
 test: ## Run tests
 	go test ./...

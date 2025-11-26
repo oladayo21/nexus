@@ -3,7 +3,7 @@ tmp_dir = "tmp"
 
 [build]
   bin = "./tmp/nexus"
-  cmd = "go build -o ./tmp/nexus ./cmd/nexus"
+  cmd = "go build -o ./tmp/nexus ."
   delay = 1000
   exclude_dir = ["tmp", "web", "node_modules"]
   exclude_regex = ["_test.go"]

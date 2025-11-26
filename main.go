@@ -1,14 +1,16 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
-
-	nexus "github.com/oladayo21/nexus"
 )
+
+//go:embed all:web/dist
+var webFS embed.FS
 
 func main() {
 	mux := http.NewServeMux()
@@ -38,7 +40,7 @@ func serveFrontend(mux *http.ServeMux) error {
 	var err error
 
 	// Try embedded first (production)
-	frontend, err = nexus.WebFS()
+	frontend, err = fs.Sub(webFS, "web/dist")
 
 	if err != nil {
 		// Fallback to filesystem (development)
@@ -49,10 +51,17 @@ func serveFrontend(mux *http.ServeMux) error {
 		}
 	}
 
+	// Check if embedded fs has content (empty in dev)
+	if entries, _ := fs.ReadDir(frontend, "."); len(entries) == 0 {
+		// Fallback to filesystem (development)
+		if _, statErr := os.Stat("web/dist"); statErr == nil {
+			frontend = os.DirFS("web/dist")
+		}
+	}
+
 	// Serve static files with SPA fallback
 	fileServer := http.FileServer(http.FS(frontend))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Try to serve the file
 		path := r.URL.Path
 
 		if path == "/" {
@@ -67,7 +76,7 @@ func serveFrontend(mux *http.ServeMux) error {
 			return
 		}
 
-		// SPA fallback - serve index.html for non-API routes
+		// SPA fallback - serve index.html
 		r.URL.Path = "/"
 		fileServer.ServeHTTP(w, r)
 	})
