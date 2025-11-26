@@ -1,0 +1,57 @@
+services:
+  traefik:
+    image: traefik:v3.0
+    ports:
+      - "3000:80"
+    command:
+      - "--entrypoints.web.address=:80"
+      - "--providers.file.filename=/etc/traefik/routes.yml"
+      - "--providers.file.watch=true"
+    volumes:
+      - ./docker/traefik.yml:/etc/traefik/routes.yml:ro
+    depends_on:
+      - nexus
+      - web
+
+  nexus:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    volumes:
+      - .:/app
+      - go-mod:/go/pkg/mod
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    volumes:
+      - ./web:/app
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus
+      POSTGRES_DB: nexus
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  go-mod:
