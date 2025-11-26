@@ -1,13 +1,13 @@
 http:
   routers:
-    nexus:
+    backend:
       rule: "PathPrefix(`/`)"
-      service: nexus
+      service: backend
       entryPoints:
         - web
 
   services:
-    nexus:
+    backend:
       loadBalancer:
         servers:
-          - url: "http://nexus:8080"
+          - url: "http://backend:8080"

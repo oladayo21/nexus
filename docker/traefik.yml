@@ -2,7 +2,7 @@ http:
   routers:
     api:
       rule: "PathPrefix(`/api`)"
-      service: nexus
+      service: backend
       entryPoints:
         - web
     web:
@@ -13,10 +13,10 @@ http:
       priority: 1
 
   services:
-    nexus:
+    backend:
       loadBalancer:
         servers:
-          - url: "http://nexus:8080"
+          - url: "http://backend:8080"
     web:
       loadBalancer:
         servers:

@@ -10,10 +10,10 @@ services:
     volumes:
       - ./traefik.yml:/etc/traefik/routes.yml:ro
     depends_on:
-      - nexus
+      - backend
     restart: unless-stopped
 
-  nexus:
+  backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile.prod

@@ -47,6 +47,10 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	if err := db.Migrate(); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
 	apiServer := api.NewAPIServer(&api.Options{
 		Config: cfg,
 		Redis:  redisClient,

@@ -1,5 +1,7 @@
 .DEFAULT_GOAL := help
 
+DATABASE_URL ?= postgres://nexus:nexus@localhost:5433/nexus?sslmode=disable
+
 .PHONY: help dev dev-down dev-logs build test migrate-up migrate-down sqlc web-dev web-build build-prod deploy-local
 
 help:
@@ -21,10 +23,10 @@ test: ## Run tests
 	go test ./...
 
 migrate-up: ## Run migrations
-	migrate -path internal/database/migrations -database "$$DATABASE_URL" up
+	migrate -path internal/database/migrations -database "$(DATABASE_URL)" up
 
 migrate-down: ## Rollback migration
-	migrate -path internal/database/migrations -database "$$DATABASE_URL" down 1
+	migrate -path internal/database/migrations -database "$(DATABASE_URL)" down 1
 
 sqlc: ## Generate sqlc code
 	sqlc generate
