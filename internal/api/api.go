@@ -11,6 +11,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/oladayo21/nexus/internal/config"
+	"github.com/oladayo21/nexus/internal/database"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -18,12 +19,14 @@ type Options struct {
 	Config *config.Config
 	Redis  *redis.Client
 	WebFS  fs.FS
+	Db     *database.Database
 }
 
 type APIServer struct {
 	echo           *echo.Echo
 	opts           *Options
 	sessionManager *scs.SessionManager
+	db             *database.Database
 }
 
 func NewAPIServer(opts *Options) *APIServer {
@@ -40,6 +43,7 @@ func NewAPIServer(opts *Options) *APIServer {
 		echo:           echo.New(),
 		opts:           opts,
 		sessionManager: sm,
+		db:             opts.Db,
 	}
 
 	s.echo.HideBanner = true
