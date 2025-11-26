@@ -1,85 +1,62 @@
 package main
 
 import (
+	"context"
 	"embed"
-	"encoding/json"
 	"io/fs"
 	"log"
-	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/oladayo21/nexus/internal/api"
+	"github.com/oladayo21/nexus/internal/config"
 )
 
 //go:embed all:web/dist
 var webFS embed.FS
 
 func main() {
-	mux := http.NewServeMux()
-
-	// API routes
-	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"status": "ok",
-		})
-	})
-
-	// Serve frontend (embedded in prod, filesystem in dev)
-	if err := serveFrontend(mux); err != nil {
-		log.Printf("Warning: frontend not available: %v", err)
-	}
-
-	log.Println("Starting server on :8080")
-
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func serveFrontend(mux *http.ServeMux) error {
-	var frontend fs.FS
-	var err error
-
-	// Try embedded first (production)
-	frontend, err = fs.Sub(webFS, "web/dist")
-
+	cfg, err := config.Load()
 	if err != nil {
-		// Fallback to filesystem (development)
-		if _, statErr := os.Stat("web/dist"); statErr == nil {
-			frontend = os.DirFS("web/dist")
-		} else {
-			return err
-		}
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Check if embedded fs has content (empty in dev)
-	if entries, _ := fs.ReadDir(frontend, "."); len(entries) == 0 {
-		// Fallback to filesystem (development)
-		if _, statErr := os.Stat("web/dist"); statErr == nil {
-			frontend = os.DirFS("web/dist")
-		}
+	// Get sub filesystem for web/dist
+	staticFS, err := fs.Sub(webFS, "web/dist")
+	if err != nil {
+		log.Fatalf("Failed to get static filesystem: %v", err)
 	}
 
-	// Serve static files with SPA fallback
-	fileServer := http.FileServer(http.FS(frontend))
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-
-		if path == "/" {
-			path = "/index.html"
-		}
-
-		// Check if file exists
-		if f, err := frontend.Open(path[1:]); err == nil {
-			f.Close()
-			fileServer.ServeHTTP(w, r)
-
-			return
-		}
-
-		// SPA fallback - serve index.html
-		r.URL.Path = "/"
-		fileServer.ServeHTTP(w, r)
+	apiServer := api.NewAPIServer(&api.APIServerOptions{
+		Port:        cfg.Port,
+		ServeStatic: cfg.IsProduction(),
+		WebFS:       staticFS,
 	})
 
-	return nil
+	// Start server in goroutine
+	go func() {
+		if err := apiServer.Start(); err != nil {
+			log.Printf("Server stopped: %v", err)
+		}
+	}()
+
+	log.Printf("Server started on :%d", cfg.Port)
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := apiServer.Stop(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Server stopped")
 }
