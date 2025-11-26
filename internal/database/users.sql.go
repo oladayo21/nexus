@@ -82,6 +82,17 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	return i, err
 }
 
+const hasUsers = `-- name: HasUsers :one
+SELECT EXISTS(SELECT 1 FROM users) AS has_users
+`
+
+func (q *Queries) HasUsers(ctx context.Context) (bool, error) {
+	row := q.db.QueryRow(ctx, hasUsers)
+	var has_users bool
+	err := row.Scan(&has_users)
+	return has_users, err
+}
+
 const updateUserName = `-- name: UpdateUserName :exec
 UPDATE users SET name = $2, updated_at = NOW() WHERE id = $1
 `

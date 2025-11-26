@@ -39,8 +39,11 @@ func NewAPIServer(opts *Options) *APIServer {
 	sm.Cookie.Secure = opts.Config.IsProduction()
 	sm.Cookie.SameSite = http.SameSiteLaxMode
 
+	e := echo.New()
+	e.Validator = NewValidator()
+
 	s := &APIServer{
-		echo:           echo.New(),
+		echo:           e,
 		opts:           opts,
 		sessionManager: sm,
 		db:             opts.Db,
