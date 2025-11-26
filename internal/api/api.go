@@ -5,55 +5,54 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"time"
 
+	"github.com/alexedwards/scs/goredisstore"
+	"github.com/alexedwards/scs/v2"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/oladayo21/nexus/internal/config"
+	"github.com/redis/go-redis/v9"
 )
 
+type Options struct {
+	Config *config.Config
+	Redis  *redis.Client
+	WebFS  fs.FS
+}
+
 type APIServer struct {
-	e    *echo.Echo
-	opts *APIServerOptions
+	echo           *echo.Echo
+	opts           *Options
+	sessionManager *scs.SessionManager
 }
 
-type APIServerOptions struct {
-	Port        int
-	ServeStatic bool
-	WebFS       fs.FS
-}
+func NewAPIServer(opts *Options) *APIServer {
+	sm := scs.New()
+	sm.Store = goredisstore.New(opts.Redis)
+	sm.Lifetime = 7 * 24 * time.Hour
+	sm.IdleTimeout = 24 * time.Hour
+	sm.Cookie.Name = "session"
+	sm.Cookie.HttpOnly = true
+	sm.Cookie.Secure = opts.Config.IsProduction()
+	sm.Cookie.SameSite = http.SameSiteLaxMode
 
-func NewAPIServer(opts *APIServerOptions) *APIServer {
-	e := echo.New()
-	e.HideBanner = true
-
-	registerRoutes(e)
-
-	if opts.ServeStatic && opts.WebFS != nil {
-		e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
-			Root:       ".",
-			Index:      "index.html",
-			HTML5:      true,
-			Filesystem: http.FS(opts.WebFS),
-		}))
+	s := &APIServer{
+		echo:           echo.New(),
+		opts:           opts,
+		sessionManager: sm,
 	}
 
-	return &APIServer{
-		e:    e,
-		opts: opts,
-	}
-}
+	s.echo.HideBanner = true
+	s.registerMiddlewares()
+	s.registerRoutes()
 
-func registerRoutes(e *echo.Echo) {
-	e.GET("/api/health", func(c echo.Context) error {
-		return c.JSON(200, map[string]string{
-			"status": "ok",
-		})
-	})
+	return s
 }
 
 func (s *APIServer) Start() error {
-	return s.e.Start(fmt.Sprintf(":%d", s.opts.Port))
+	return s.echo.Start(fmt.Sprintf(":%d", s.opts.Config.Port))
 }
 
 func (s *APIServer) Stop(ctx context.Context) error {
-	return s.e.Shutdown(ctx)
+	return s.echo.Shutdown(ctx)
 }

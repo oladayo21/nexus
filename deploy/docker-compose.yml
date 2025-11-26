@@ -22,7 +22,7 @@ services:
     environment:
       - ENV=production
       - DATABASE_URL=postgres://nexus:${POSTGRES_PASSWORD}@postgres:5432/nexus?sslmode=disable
-      - REDIS_URL=redis://redis:6379
+      - REDIS_ADDR=redis:6379
     depends_on:
       - postgres
       - redis

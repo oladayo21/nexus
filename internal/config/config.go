@@ -7,8 +7,9 @@ import (
 type Config struct {
 	Env         string `env:"ENV" envDefault:"development"`
 	Port        int    `env:"PORT" envDefault:"8080"`
+	AppSecret   string `env:"APP_SECRET,required"`
 	DatabaseURL string `env:"DATABASE_URL,required"`
-	RedisURL    string `env:"REDIS_URL,required"`
+	RedisAddr   string `env:"REDIS_ADDR" envDefault:"localhost:6379"`
 }
 
 func Load() (*Config, error) {
